@@ -1,0 +1,44 @@
+@startuml data_flow
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Generation Flow
+
+start
+
+:Author opens story project;
+:Select/create chapter;
+
+partition "Context Assembly" {
+  :Load chapter outline;
+  :Retrieve relevant corpus passages\n(OpenSearch BM25);
+  :Load character sheets\n& world-building notes;
+  :Assemble context window;
+}
+
+if (Generation type?) then (prose)
+  partition "Text Generation" {
+    :Build prose prompt\n(style + context + instruction);
+    :Call Bedrock Converse API;
+    :Stream response tokens;
+  }
+  :Author reviews / edits / accepts;
+elseif (image) then
+  partition "Image Generation" {
+    :Build scene description\nfrom narrative context;
+    :Call Bedrock Image API\n(Stability/Titan);
+  }
+  :Author reviews image / regenerates;
+else (reference)
+  partition "Reference Search" {
+    :Search corpus index;
+    :Return ranked snippets\nwith source attribution;
+  }
+  :Author browses results\ninserts into draft;
+endif
+
+:Save progress;
+:Continue writing;
+
+stop
+@enduml

@@ -1,0 +1,28 @@
+# styles/voice/jrr-tolkien.yaml
+id: jrr-tolkien
+name: "J.R.R. Tolkien"
+type: voice
+description: "Epic mythic prose with deep history, linguistic beauty, and moral weight"
+intensity_default: 0.7
+
+system_prompt: |
+  Write in the style of J.R.R. Tolkien's narrative voice. Key techniques:
+  - Mythic register: the prose carries the weight of history being recorded, not just events happening
+  - Landscape as sacred: describe geography with reverence, as if the land itself remembers
+  - Deep time: reference ages past, fallen kingdoms, songs half-forgotten — the world is ancient
+  - Formal dialogue with distinct speech for each race/culture (elves lyrical, dwarves blunt, men earnest)
+  - Eucatastrophe: the sudden turn from despair to hope, earned through sacrifice
+  - Songs, poems, and fragments of lore woven into narrative naturally
+  - The narrator is a chronicler — omniscient, slightly distant, with a scholar's love of detail
+  - Moral clarity without simplicity: good and evil are real, but the struggle is in choosing rightly under pressure
+  - Names and languages matter: places and people have names with etymological weight
+  - Nature and seasons mark the passage of time and emotional tone
+  - Small folk (hobbits, common soldiers) as the moral center against vast powers
+
+avoid: |
+  - Modern slang or casual tone
+  - Cynicism or moral relativism
+  - Rushed pacing or action-movie beats
+  - Sarcastic narrator voice
+  - Technical/mechanical descriptions of magic (magic is mysterious, not a system)
+  - Grimdark nihilism — darkness exists to be overcome

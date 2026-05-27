@@ -1,0 +1,57 @@
+@startuml styles
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Style & Mode System
+
+package "Style Registry" {
+  [Image Styles\n(visual aesthetics)] as img_styles
+  [Voice Styles\n(author/tone)] as voice_styles
+  [Composite Modes\n(image + voice)] as modes
+}
+
+package "Built-in Image Styles" #LightYellow {
+  card "80s Retro" as s80
+  card "Noir" as snoir
+  card "Watercolor" as swc
+  card "Comic Book" as scomic
+  card "Photorealistic" as sphoto
+  card "Studio Ghibli" as sghibli
+  card "Pixel Art" as spixel
+}
+
+package "Built-in Voice Styles" #LightGreen {
+  card "Stephen King" as vking
+  card "Cormac McCarthy" as vcormac
+  card "Ursula K. Le Guin" as vleguin
+  card "Raymond Chandler" as vchandler
+  card "Terry Pratchett" as vpratchett
+  card "Terse / Hemingway" as vhem
+}
+
+package "Generation Pipeline" {
+  [Context\nAssembler] as ctx
+  [Prompt\nBuilder] as builder
+  [Bedrock API] as bedrock
+}
+
+img_styles --> builder : negative/positive\nprompt modifiers
+voice_styles --> builder : system prompt\nstyle instructions
+modes --> builder : combined preset
+
+ctx --> builder : story context
+builder --> bedrock : final prompt
+
+note right of modes
+  Modes combine image + voice:
+  "80s-horror" = 80s Retro + Stephen King
+  "literary-noir" = Noir + Chandler
+  Users can define custom modes
+end note
+
+note bottom of builder
+  Style fragments are injected into:
+  - Image: positive/negative prompt, cfg_scale, sampler
+  - Text: system prompt preamble with voice rules
+end note
+@enduml

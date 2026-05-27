@@ -1,0 +1,47 @@
+@startuml components
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Component Interactions
+
+package "Reused from document_search" #LightBlue {
+  [OpenSearch\nIndexing & Search] as os_module
+  [PlantUML\nRenderer] as puml_module
+  [Bedrock\nConverse Client] as bedrock_module
+}
+
+package "New: story_writer core" #LightGreen {
+  [corpus_indexer.py\n- scan txt dirs\n- chunk & index] as indexer
+  [retriever.py\n- search corpus\n- rank & filter\n- snippet extraction] as retriever
+  [text_gen.py\n- prose generation\n- style enforcement\n- streaming output] as textgen
+  [image_gen.py\n- scene-to-prompt\n- Bedrock Image API\n- save to project] as imagegen
+  [session.py\n- project state\n- chapter tracking\n- undo/history] as session
+  [cli.py\n- TUI commands\n- interactive mode\n- batch mode] as cli
+}
+
+cli --> session
+cli --> retriever : "/ref <query>"
+cli --> textgen : "/gen <instruction>"
+cli --> imagegen : "/img <scene>"
+
+session --> indexer : on project open
+indexer --> os_module
+retriever --> os_module
+textgen --> bedrock_module
+imagegen --> bedrock_module
+
+note bottom of os_module
+  Same OpenSearch patterns
+  from document_search:
+  - BM25 full-text
+  - multi_match queries
+  - highlighted snippets
+end note
+
+note bottom of bedrock_module
+  Same Converse API wrapper:
+  - system prompt + user msg
+  - token tracking
+  - model-agnostic
+end note
+@enduml

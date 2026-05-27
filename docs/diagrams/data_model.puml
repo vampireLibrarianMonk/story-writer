@@ -1,0 +1,115 @@
+@startuml data_model
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Data Model
+
+entity "projects" as proj {
+  * project_id : text <<PK>>
+  --
+  name : text
+  genre : text
+  style_notes : text
+  created_at : timestamp
+}
+
+entity "chapters" as ch {
+  * chapter_id : text <<PK>>
+  --
+  * project_id : text <<FK>>
+  title : text
+  order_index : integer
+  outline : text
+  content : text
+  status : text
+  updated_at : timestamp
+}
+
+entity "corpus_files" as cf {
+  * file_id : text <<PK>>
+  --
+  * project_id : text <<FK>>
+  path : text
+  title : text
+  category : text
+  indexed_at : timestamp
+}
+
+entity "characters" as char {
+  * character_id : text <<PK>>
+  --
+  * project_id : text <<FK>>
+  name : text
+  species : text
+  role : text
+  description : text
+  traits : text
+  relationships : text
+  status : text
+}
+
+entity "entities" as ent {
+  * entity_id : text <<PK>>
+  --
+  * project_id : text <<FK>>
+  name : text
+  entity_type : text
+  description : text
+  metadata : json
+  status : text
+  created_at : timestamp
+}
+
+entity "entity_mentions" as mention {
+  * mention_id : text <<PK>>
+  --
+  * entity_id : text <<FK>>
+  * chapter_id : text <<FK>>
+  line_number : integer
+  context_snippet : text
+  detected_at : timestamp
+}
+
+entity "extraction_queue" as queue {
+  * queue_id : text <<PK>>
+  --
+  * project_id : text <<FK>>
+  name : text
+  entity_type : text
+  source_snippet : text
+  source_chapter : text
+  status : text
+  created_at : timestamp
+}
+
+entity "images" as img {
+  * image_id : text <<PK>>
+  --
+  * chapter_id : text <<FK>>
+  prompt_used : text
+  file_path : text
+  created_at : timestamp
+}
+
+entity "generation_log" as glog {
+  * id : serial <<PK>>
+  --
+  timestamp : timestamp
+  model_id : text
+  operation : text
+  input_tokens : integer
+  output_tokens : integer
+  cost_usd : double
+  chapter_id : text
+}
+
+proj ||--o{ ch : "has chapters"
+proj ||--o{ cf : "has corpus"
+proj ||--o{ char : "has characters"
+proj ||--o{ ent : "has entities"
+proj ||--o{ queue : "has queue"
+ch ||--o{ img : "has images"
+ch ||--o{ mention : "has mentions"
+ent ||--o{ mention : "tracked by"
+ch .. glog : "tracks cost"
+@enduml

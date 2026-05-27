@@ -1,0 +1,52 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment & secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Node (frontend)
+node_modules/
+frontend/dist/
+
+# Data & runtime
+*.db
+*.sqlite3
+data/uploads/
+
+# Project content (user stories, images, corpus — not committed)
+projects/
+
+# Test & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# PlantUML rendered (regenerate with `make diagrams`)
+docs/diagrams/*.png

@@ -1,0 +1,46 @@
+@startuml ui_layout
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam defaultFontSize 11
+
+title Story Writer - Web UI Layout
+
+rectangle "Header Bar" as header #333333 {
+  card "Project: Sky Carriers" as proj_name #444444
+  card "Ch.4: First Blood" as ch_name #444444
+  card "Style: Clancy × Synthwave" as style_badge #6B21A8
+  card "Words: 2,847" as wordcount #444444
+}
+
+rectangle "Main Layout (3-panel)" as main {
+
+  rectangle "Left Panel\n(collapsible)" as left #1E1E2E {
+    card "📁 Chapters" as chapters #2D2D3D
+    card "👤 Characters" as chars #2D2D3D
+    card "🌍 World Bible" as bible #2D2D3D
+    card "🖼️ Images" as images #2D2D3D
+    card "📝 Notes" as notes #2D2D3D
+  }
+
+  rectangle "Center: Writing Canvas" as center #0D0D0D {
+    card "── THE BRIEFING ──\n(on open, fades when writing)" as briefing #1A1A2E
+    card "Editor\n(distraction-free\nrich text\ndark theme)" as editor #0D0D0D
+    card "AI suggestion\n(ghost text, Tab to accept)" as ghost #1A1A2E
+  }
+
+  rectangle "Right Panel\n(collapsible)" as right #1E1E2E {
+    card "🔍 Reference Search" as search #2D2D3D
+    card "🎨 Image Gen" as imggen #2D2D3D
+    card "📋 Outline" as outline #2D2D3D
+    card "💬 AI Chat" as chat #2D2D3D
+  }
+}
+
+rectangle "Bottom Bar (command palette)" as bottom #222222 {
+  card "/ command..." as cmd #333333
+  card "⌘K: command palette" as palette #333333
+}
+
+header -[hidden]-> main
+main -[hidden]-> bottom
+@enduml

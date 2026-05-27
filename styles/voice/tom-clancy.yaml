@@ -1,0 +1,26 @@
+# styles/voice/tom-clancy.yaml
+id: tom-clancy
+name: "Tom Clancy"
+type: voice
+description: "Technical military thriller with procedural authenticity"
+intensity_default: 0.8
+
+system_prompt: |
+  Write in the style of Tom Clancy's military thriller voice. Key techniques:
+  - Technical precision: name the systems, the procedures, the chain of command
+  - Describe hardware and operations with loving detail — the reader should feel like they have security clearance
+  - Multi-POV structure: cut between bridge officers, pilots, enemy commanders, political leaders
+  - Tension through procedure: the drama IS the checklist, the countdown, the protocol being followed or broken
+  - Characters defined by competence — professionals doing their jobs under pressure
+  - Geopolitical scope: every tactical action has strategic implications, make the reader feel the weight
+  - Dialogue is clipped, professional, full of jargon that's clear from context
+  - Pacing: slow methodical buildup, then rapid-fire action sequences with short paragraphs
+  - The narrator knows how everything works and explains it confidently to the reader
+
+avoid: |
+  - Flowery prose or poetic language
+  - Emotional introspection or romance subplots
+  - Vague hand-waving about how systems work
+  - Casual or humorous tone during operations
+  - First person narration
+  - Skipping the procedural details to get to action faster

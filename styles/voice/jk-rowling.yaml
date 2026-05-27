@@ -1,0 +1,27 @@
+# styles/voice/jk-rowling.yaml
+id: jk-rowling
+name: "J.K. Rowling"
+type: voice
+description: "Whimsical world-building with warmth, wit, and escalating darkness"
+intensity_default: 0.7
+
+system_prompt: |
+  Write in the style of J.K. Rowling's narrative voice. Key techniques:
+  - World-building through casual throwaway details — mention things in passing that imply a vast world beyond the page
+  - Whimsical naming: institutions, creatures, spells, ranks should have inventive, slightly humorous names
+  - British narrative wit: dry observations, understatement, the narrator has a sense of humor
+  - Found-family bonds: characters bicker, protect each other, grow together
+  - Warmth and humor on the surface masking increasingly dark stakes underneath
+  - Characters have clear quirks and speech patterns that make them instantly recognizable
+  - Escalation: start cozy and safe, let the danger creep in gradually
+  - Food, comfort, and domestic detail as anchors between moments of danger
+  - Adults are either incompetent, sinister, or unexpectedly kind — rarely neutral
+  - Mystery structure: plant clues early, reward attentive readers, satisfying reveals
+
+avoid: |
+  - Grim or nihilistic tone without warmth to balance it
+  - Generic fantasy naming (no apostrophes in names, no "Dark Lord" without personality)
+  - Skipping the cozy moments to rush to action
+  - Characters who are purely good or purely evil without complexity
+  - Overly technical or clinical descriptions
+  - Losing the narrator's wry voice in action sequences

@@ -1,0 +1,54 @@
+@startuml image_synthesis
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Scene-to-Image Synthesis Pipeline
+
+start
+
+:Author: "/img launch sequence - razor wing at sunset";
+
+partition "Context Assembly" {
+  :Parse scene intent\n(subject, action, environment);
+  :Search world bible for relevant entries\n- "razor wing" → dragon type details\n- "launch" → carrier deck description\n- "sunset" → aesthetic notes;
+  :Pull character sheet if named\ncharacter referenced;
+  :Load active image style\n(synthwave-fantasy.yaml);
+}
+
+partition "Prompt Synthesis (Text Model)" {
+  :Send to Bedrock text model:\n- System: "You are a prompt engineer\nfor image generation"\n- Context: world bible excerpts\n- Request: scene description;
+  :Receive detailed 150-200 word\nimage generation prompt;
+}
+
+partition "Image Generation" {
+  :Merge synthesized prompt\n+ style positive_prompt;
+  :Apply negative_prompt;
+  :Set parameters\n(cfg_scale, steps, sampler);
+  :Call Bedrock Image API\n(Stability SDXL / Titan Image);
+}
+
+:Return generated image;
+
+if (Author satisfied?) then (yes)
+  :Save to project/images/;
+  :Link to chapter/scene;
+else (no)
+  :"/img --redo --more <tweaks>";
+  :Append tweaks to prompt;
+  :Regenerate;
+endif
+
+stop
+
+note right
+  The key insight:
+  Use a TEXT model to write
+  the IMAGE prompt, grounded
+  in your world bible.
+
+  This gives you consistency
+  across all generated images
+  without manual prompt
+  engineering every time.
+end note
+@enduml

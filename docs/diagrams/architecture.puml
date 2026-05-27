@@ -1,0 +1,86 @@
+@startuml architecture
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam componentStyle rectangle
+
+title Story Writer - System Architecture
+
+actor "Author" as user
+
+package "Frontend (TUI / Web)" {
+  [CLI Interface\n(Rich/Textual)] as tui
+  [Web UI\n(optional future)] as webui
+}
+
+package "Core Engine" {
+  [Story Session\nManager] as session
+  [Prompt\nOrchestrator] as orchestrator
+  [Context\nAssembler] as assembler
+}
+
+package "Generation Services" {
+  [Text Generator\n(Bedrock Converse)] as textgen
+  [Image Generator\n(Bedrock/Stability)] as imagegen
+  [PlantUML\nRenderer] as puml
+}
+
+package "Document Index" {
+  [Corpus Indexer\n(OpenSearch)] as indexer
+  [Reference\nRetriever] as retriever
+  database "OpenSearch\n(BM25 + chunks)" as os
+}
+
+package "Storage" {
+  storage "Corpus\n(txt files)" as corpus
+  storage "Project Output\n(stories/images)" as output
+  database "SQLite\n(sessions/metadata)" as sqlite
+}
+
+package "External" {
+  cloud "Amazon Bedrock\n(Converse API)" as bedrock
+}
+
+user --> tui
+user --> webui
+tui --> session
+webui --> session
+
+session --> orchestrator : user intent
+orchestrator --> assembler : gather context
+assembler --> retriever : find relevant passages
+retriever --> os : BM25 search
+assembler --> corpus : read source files
+
+orchestrator --> textgen : prompt + context
+orchestrator --> imagegen : scene description
+orchestrator --> puml : story structure
+
+textgen --> bedrock : generate prose
+imagegen --> bedrock : generate image
+
+indexer --> corpus : scan & chunk txt files
+indexer --> os : index chunks
+
+session --> sqlite : save state\nprogress\nhistory
+session --> output : write chapters\nimages
+
+note right of bedrock
+  Models:
+  - Text: Claude Sonnet/Haiku
+  - Image: Stability SDXL / Titan Image
+  - Cheap ref: Nova Lite
+end note
+
+note right of os
+  Indexes all .txt corpus files
+  Enables instant cross-reference
+  across thousands of documents
+  with highlighted snippets
+end note
+
+note bottom of assembler
+  Pulls relevant passages from
+  corpus based on current scene,
+  characters, world-building notes
+end note
+@enduml

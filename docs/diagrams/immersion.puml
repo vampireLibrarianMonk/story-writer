@@ -1,0 +1,49 @@
+@startuml immersion
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Immersion Flow
+
+start
+
+:Author opens project;
+
+partition "The Briefing (auto)" {
+  :Load last session state\n(cursor, chapter, scene beat);
+  :Show last line written;
+  :AI generates "where you left off"\nsummary from last ~500 words;
+  :Pull next beats from outline;
+  :Set mood line from style + context;
+}
+
+:Display briefing panel;
+
+switch (Author chooses)
+case (continue)
+  :Drop at cursor\nstart writing;
+case (reread)
+  :Show last 1-2 pages;
+  :Drop at cursor;
+case (mood)
+  :Generate atmospheric\nvibe-setter paragraph;
+  :Author reads, gets in zone;
+  :Drop at cursor;
+case (interview)
+  :AI asks questions\nabout next scene;
+  :Author talks through\nwhat happens;
+  :AI offers opening line;
+  :Author writes;
+case (dive)
+  :Surface random relevant\ncorpus passage;
+  :Author reads, sparks ideas;
+  :Drop at cursor;
+endswitch
+
+:Writing session active;
+:Track cursor, time, word count;
+
+:Author stops;
+:Auto-save session state\n+ last line + notes;
+
+stop
+@enduml

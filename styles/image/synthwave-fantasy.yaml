@@ -1,0 +1,29 @@
+# styles/image/synthwave-fantasy.yaml
+id: synthwave-fantasy
+name: "Synthwave Fantasy Military"
+type: image
+description: "80s Top Gun aesthetic fused with high fantasy - neon runes, dragon carriers, sunset skies"
+intensity_default: 0.9
+
+positive_prompt: |
+  80s synthwave aesthetic, fantasy military, neon pink and cyan magical runes,
+  golden hour dramatic lighting, chrome mithril armor reflections,
+  VHS film grain, lens flare, epic scale, dramatic clouds,
+  purple and orange sunset sky, grid-line energy effects,
+  detailed fantasy armor with glowing sigils, cinematic composition,
+  album cover art quality, airbrushed 1980s fantasy illustration,
+  Boris Vallejo meets synthwave, Frank Frazetta lighting,
+  Trapper Keeper fantasy art, heavy metal magazine cover
+
+negative_prompt: |
+  modern, minimalist, cartoon, chibi, cute, flat design,
+  photorealistic mundane, contemporary clothing, technology,
+  screens, computers, guns, vehicles, buildings,
+  low quality, blurry, deformed hands, extra fingers,
+  text, watermark, signature
+
+parameters:
+  cfg_scale: 9
+  sampler: "DPMPP_2M"
+  steps: 50
+  style_preset: "fantasy-art"

@@ -1,0 +1,59 @@
+@startuml consistency
+!theme plain
+skinparam backgroundColor #FEFEFE
+
+title Story Writer - Consistency & Plot Hole Detection
+
+start
+
+partition "As You Write" {
+  :New paragraph written;
+  :Extract entities + facts\n(who did what, where, with what ability);
+  :Check against knowledge base;
+
+  if (Contradiction found?) then (yes)
+    :Show inline alert\n(subtle, non-blocking);
+    switch (Author response)
+    case (Fix)
+      :Edit the text;
+    case (Update canon)
+      :Update entity rules\n(new info is correct);
+    case (Ignore)
+      :Suppress this alert;
+    endswitch
+  else (no)
+    :Update entity locations\n& state silently;
+  endif
+}
+
+partition "Story Point Tracking" {
+  if (Setup/foreshadowing detected?) then (yes)
+    :Prompt: "Track as story point?";
+    if (Author confirms) then (yes)
+      :Add to tracker\nstatus: PLANTED;
+    endif
+  endif
+
+  if (Existing story point referenced?) then (yes)
+    :Update status:\nPLANTED → REINFORCED → PAYOFF;
+  endif
+}
+
+partition "End-of-Session Sweep" {
+  :Full chapter scan vs all rules;
+  :Check story point staleness\n(planted too long ago?);
+  :Timeline validation;
+  :Generate session report;
+}
+
+stop
+
+note right
+  Alert severity:
+  🔴 Fact contradiction
+  🔴 Ability rule violation
+  🟡 Timeline break
+  🟡 Unresolved setup (stale)
+  🟢 Forgotten subplot thread
+end note
+@enduml
