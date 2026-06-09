@@ -1,12 +1,5 @@
 import { useState, useEffect } from 'react'
 
-interface CharacterImage {
-  id: string
-  prompt: string
-  timestamp: string
-  url: string // base64 data URL or path
-}
-
 interface Character {
   id: string
   name: string
@@ -28,12 +21,14 @@ interface Character {
   relationships: { name: string; relation: string }[]
   backstory: string
   notes: string
-  images: CharacterImage[]
+  rawCarryover: string
 }
 
 interface Props {
   project: string
   characterId?: string
+  rawContent?: string
+  initialName?: string
   onClose: () => void
 }
 
@@ -41,7 +36,64 @@ const EMPTY_CHARACTER: Character = {
   id: '', name: '', species: 'Human', role: '', rank: '', age: '',
   appearance: { height: '', build: '', hair: '', eyes: '', skin: '', distinguishing: '' },
   personality: '', abilities: [], equipment: [],
-  relationships: [], backstory: '', notes: '', images: [],
+  relationships: [], backstory: '', notes: '', rawCarryover: '',
+}
+
+function parseRawProfile(text: string, fallbackName: string): Character {
+  const char: Character = { ...EMPTY_CHARACTER, id: crypto.randomUUID().slice(0, 8), rawCarryover: text }
+
+  // Name
+  const nameMatch = text.match(/Name:\s*(.+)/i)
+  char.name = nameMatch ? nameMatch[1].trim() : fallbackName
+
+  // Role
+  const roleMatch = text.match(/Role:\s*(.+)/i)
+  if (roleMatch) char.role = roleMatch[1].trim()
+
+  // Age
+  const ageMatch = text.match(/Age:\s*(.+)/i)
+  if (ageMatch) char.age = ageMatch[1].trim()
+
+  // Background/Backstory - grab the text after "Background:" until next section
+  const bgMatch = text.match(/Background:\s*(.+?)(?=\n\n|\n[A-Z])/s)
+  if (bgMatch) char.backstory = bgMatch[1].trim()
+
+  // Personality - grab content between "Personality" header and next major section
+  const persMatch = text.match(/Personality\n([\s\S]+?)(?=\n(?:Abilities|Powers|Relationships|Role in|Character Arc|Significant))/i)
+  if (persMatch) char.personality = persMatch[1].trim()
+
+  // Abilities - find lines after "Abilities" section
+  const abilMatch = text.match(/(?:Abilities|Powers)[^\n]*\n([\s\S]+?)(?=\n(?:Relationships|Role in|Character Arc|Significant|Equipment))/i)
+  if (abilMatch) {
+    const abilText = abilMatch[1]
+    // Extract named abilities (lines starting with a capitalized word followed by colon)
+    const abilities = abilText.match(/^([A-Z][^:]+):/gm)
+    if (abilities) {
+      char.abilities = abilities.map(a => a.replace(/:$/, '').trim())
+    }
+  }
+
+  // Relationships
+  const relMatch = text.match(/Relationships\n([\s\S]+?)(?=\n(?:Role in|Character Arc|Significant|$))/i)
+  if (relMatch) {
+    const relLines = relMatch[1].match(/^([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\s*\(([^)]+)\)/gm)
+    if (relLines) {
+      char.relationships = relLines.map(line => {
+        const m = line.match(/^(.+?)\s*\(([^)]+)\)/)
+        return m ? { name: m[1].trim(), relation: m[2].trim() } : { name: line, relation: '' }
+      })
+    } else {
+      // Try "Name\n" pattern as section headers
+      const relSections = relMatch[1].match(/^([A-Z][a-z]+(?:\s(?:\([^)]+\)|[A-Z][a-z]+))*)/gm)
+      if (relSections) {
+        char.relationships = relSections
+          .filter(s => s.length > 2 && !s.match(/^(Shared|Balance|Opposites|Trust|Nurturing|A )/))
+          .map(name => ({ name: name.trim(), relation: 'ally' }))
+      }
+    }
+  }
+
+  return char
 }
 
 function loadCharacters(project: string): Character[] {
@@ -53,18 +105,40 @@ function saveCharacters(project: string, chars: Character[]) {
   localStorage.setItem(`story-writer-characters-${project}`, JSON.stringify(chars))
 }
 
-export default function CharacterEditor({ project, characterId, onClose }: Props) {
-  const [characters, setCharacters] = useState<Character[]>(() => loadCharacters(project))
-  const [activeId, setActiveId] = useState<string | null>(characterId || characters[0]?.id || null)
+export default function CharacterEditor({ project, characterId, rawContent, initialName, onClose }: Props) {
+  const [characters, setCharacters] = useState<Character[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+
   const [newAbility, setNewAbility] = useState('')
   const [newEquipment, setNewEquipment] = useState('')
   const [newRelName, setNewRelName] = useState('')
   const [newRelType, setNewRelType] = useState('')
-  const [generating, setGenerating] = useState(false)
+  const [rawOpen, setRawOpen] = useState(false)
 
   const active = characters.find(c => c.id === activeId) || null
 
-  useEffect(() => { saveCharacters(project, characters) }, [characters])
+  // Load characters: always from API parsed data
+  useEffect(() => {
+    localStorage.removeItem(`story-writer-characters-${project}`)
+    fetch(`/api/projects/${project}/characters-parsed`)
+      .then(r => r.ok ? r.json() : [])
+      .then((parsed: Character[]) => {
+        if (parsed.length > 0) {
+          setCharacters(parsed)
+          const target = initialName ? parsed.find(c => c.name === initialName) : parsed[0]
+          setActiveId(target?.id || parsed[0]?.id || null)
+        } else if (rawContent && initialName) {
+          const char = parseRawProfile(rawContent, initialName)
+          setCharacters([char])
+          setActiveId(char.id)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { if (characters.length > 0) saveCharacters(project, characters) }, [characters])
 
   const updateChar = (updates: Partial<Character>) => {
     setCharacters(characters.map(c => c.id === activeId ? { ...c, ...updates } : c))
@@ -94,7 +168,6 @@ export default function CharacterEditor({ project, characterId, onClose }: Props
     updateChar({ abilities: [...active.abilities, newAbility.trim()] })
     setNewAbility('')
   }
-
   const removeAbility = (idx: number) => {
     if (!active) return
     updateChar({ abilities: active.abilities.filter((_, i) => i !== idx) })
@@ -105,7 +178,6 @@ export default function CharacterEditor({ project, characterId, onClose }: Props
     updateChar({ equipment: [...active.equipment, newEquipment.trim()] })
     setNewEquipment('')
   }
-
   const removeEquipment = (idx: number) => {
     if (!active) return
     updateChar({ equipment: active.equipment.filter((_, i) => i !== idx) })
@@ -117,65 +189,17 @@ export default function CharacterEditor({ project, characterId, onClose }: Props
     setNewRelName('')
     setNewRelType('')
   }
-
   const removeRelationship = (idx: number) => {
     if (!active) return
     updateChar({ relationships: active.relationships.filter((_, i) => i !== idx) })
   }
 
-  const generateImage = async () => {
-    if (!active) return
-    setGenerating(true)
-    // Build prompt from character data
-    const prompt = [
-      active.name,
-      active.species,
-      active.appearance.build && `${active.appearance.build} build`,
-      active.appearance.hair && `${active.appearance.hair} hair`,
-      active.appearance.eyes && `${active.appearance.eyes} eyes`,
-      active.appearance.skin && `${active.appearance.skin} skin`,
-      active.appearance.distinguishing,
-      active.role,
-      active.equipment.length > 0 && `carrying ${active.equipment.join(', ')}`,
-    ].filter(Boolean).join(', ')
-
-    // Simulate generation (in real app, calls /api/generate-image)
-    await new Promise(r => setTimeout(r, 1500))
-
-    const newImage: CharacterImage = {
-      id: crypto.randomUUID().slice(0, 8),
-      prompt,
-      timestamp: new Date().toISOString(),
-      url: '', // placeholder — real impl returns base64 from Bedrock
-    }
-    updateChar({ images: [...active.images, newImage] })
-    setGenerating(false)
-  }
-
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-[#1A1A2E] border border-[#2D2D3D] rounded-xl w-[900px] max-h-[85vh] flex overflow-hidden">
-        {/* Character list sidebar */}
-        <div className="w-48 border-r border-[#2D2D3D] p-3 flex flex-col">
-          <div className="text-xs uppercase tracking-wider text-[#6B7280] mb-2">Characters</div>
-          <div className="flex-1 overflow-y-auto space-y-1">
-            {characters.map(c => (
-              <button
-                key={c.id}
-                onClick={() => setActiveId(c.id)}
-                className={`w-full text-left text-sm px-2 py-1.5 rounded transition-colors ${
-                  c.id === activeId ? 'bg-[#06B6D4]/10 text-[#06B6D4] border-l-2 border-[#06B6D4]' : 'text-[#E2E2E8] hover:bg-[#2D2D3D]'
-                }`}
-              >
-                {c.name || 'Unnamed'}
-              </button>
-            ))}
-          </div>
-          <button onClick={createCharacter} className="text-xs text-[#06B6D4] hover:text-[#22D3EE] mt-2">+ New Character</button>
-        </div>
-
-        {/* Editor area */}
-        {active ? (
+      <div className="bg-[#1A1A2E] border border-[#2D2D3D] rounded-xl w-[750px] max-h-[85vh] flex overflow-hidden">
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center text-[#6B7280] p-8">Loading...</div>
+        ) : active ? (
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
             {/* Header */}
             <div className="flex justify-between items-start">
@@ -186,12 +210,11 @@ export default function CharacterEditor({ project, characterId, onClose }: Props
                 placeholder="Character name"
               />
               <div className="flex gap-2">
-                <button onClick={deleteCharacter} className="text-xs text-red-400 hover:text-red-300">Delete</button>
                 <button onClick={onClose} className="text-xs text-[#6B7280] hover:text-[#E2E2E8]">Close ×</button>
               </div>
             </div>
 
-            {/* Basic info row */}
+            {/* Basic info */}
             <div className="grid grid-cols-4 gap-3">
               <Field label="Species" value={active.species} onChange={v => updateChar({ species: v })} />
               <Field label="Role" value={active.role} onChange={v => updateChar({ role: v })} />
@@ -296,32 +319,23 @@ export default function CharacterEditor({ project, characterId, onClose }: Props
               />
             </Section>
 
-            {/* Image Generation */}
-            <Section title="Character Images">
-              <div className="flex gap-2 mb-3">
+            {/* Raw Carryover Data */}
+            {active.rawCarryover && (
+              <div className="border border-[#2D2D3D] rounded-lg overflow-hidden">
                 <button
-                  onClick={generateImage}
-                  disabled={generating}
-                  className="bg-[#D946EF]/20 text-[#D946EF] text-sm px-3 py-1.5 rounded hover:bg-[#D946EF]/30 transition-colors disabled:opacity-50"
+                  onClick={() => setRawOpen(!rawOpen)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-[#0D0D14] hover:bg-[#1A1A2E] transition-colors"
                 >
-                  {generating ? '⏳ Generating...' : '🎨 Generate Portrait'}
+                  <span className="text-xs uppercase tracking-wider text-[#6B7280]">📄 Raw Source Data</span>
+                  <span className="text-[#6B7280] text-sm">{rawOpen ? '▾' : '▸'}</span>
                 </button>
-                <span className="text-[#6B7280] text-xs self-center">Uses appearance + equipment fields as prompt</span>
+                {rawOpen && (
+                  <div className="p-4 bg-[#0A0A0F] max-h-64 overflow-y-auto">
+                    <pre className="whitespace-pre-wrap text-xs text-[#9CA3AF] leading-relaxed font-sans">{active.rawCarryover}</pre>
+                  </div>
+                )}
               </div>
-              {active.images.length > 0 && (
-                <div className="space-y-2">
-                  {active.images.map((img) => (
-                    <div key={img.id} className="bg-[#0D0D14] border border-[#2D2D3D] rounded p-3">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="text-[#6B7280] text-xs">{new Date(img.timestamp).toLocaleDateString()}</span>
-                        {img.url && <div className="w-16 h-16 bg-[#2D2D3D] rounded" />}
-                      </div>
-                      <p className="text-xs text-[#6B7280] italic">Prompt: {img.prompt}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Section>
+            )}
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center text-[#6B7280]">

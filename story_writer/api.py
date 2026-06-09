@@ -7,6 +7,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from .session import Session
@@ -123,6 +124,16 @@ def get_character(project_name: str, filename: str):
     return {"name": filename, "content": path.read_text(encoding="utf-8", errors="replace")}
 
 
+@app.get("/api/projects/{project_name}/characters-parsed")
+def get_parsed_characters(project_name: str):
+    """Return pre-parsed character data if available."""
+    import json as _json
+    parsed_path = PROJECTS_DIR / project_name / ".characters-parsed.json"
+    if parsed_path.exists():
+        return _json.loads(parsed_path.read_text())
+    return []
+
+
 # -- Chapters --
 
 @app.get("/api/projects/{project_name}/chapters")
@@ -136,6 +147,15 @@ def list_chapters(project_name: str):
         for f in sorted(ch_dir.iterdir())
         if f.is_file()
     ]
+
+
+@app.get("/api/projects/{project_name}/chapters/{filename:path}")
+def get_chapter(project_name: str, filename: str):
+    """Read a chapter file."""
+    path = PROJECTS_DIR / project_name / "chapters" / filename
+    if not path.exists():
+        return {"error": "Not found"}
+    return {"title": path.stem, "content": path.read_text(encoding="utf-8", errors="replace")}
 
 
 # -- Styles --
@@ -154,3 +174,14 @@ def get_briefing(project_name: str):
     s = Session()
     s.open_project(project_name)
     return s.get_briefing()
+
+
+# -- Serve frontend static build --
+FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
+
+if FRONTEND_DIST.exists():
+    @app.get("/")
+    def serve_root():
+        return FileResponse(FRONTEND_DIST / "index.html")
+
+    app.mount("/", StaticFiles(directory=str(FRONTEND_DIST)), name="static")

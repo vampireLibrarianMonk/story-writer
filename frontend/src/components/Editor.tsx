@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import CharacterEditor from './CharacterEditor'
+import { fetchCharacters, fetchChapters, fetchChapterContent, fetchCharacterContent } from '../api'
 
 interface Props {
   project: string
@@ -7,15 +8,22 @@ interface Props {
 }
 
 export default function Editor({ project, onBack }: Props) {
-  const stateKey = `story-writer-state-${project}`
   const contentKey = `story-writer-content-${project}`
-  const chaptersKey = `story-writer-chapters-${project}`
 
   const [content, setContent] = useState(() => localStorage.getItem(contentKey) || '')
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<string[]>([])
+  const [searchResults, setSearchResults] = useState<{ title: string; snippet: string }[]>([])
   const [charEditorOpen, setCharEditorOpen] = useState(false)
+  const [charEditorRaw, setCharEditorRaw] = useState('')
+  const [charEditorName, setCharEditorName] = useState('')
+  const [viewingCharacter, setViewingCharacter] = useState<{ name: string; content: string } | null>(null)
 
+  // Data from API
+  const [characters, setCharacters] = useState<{ name: string; file: string }[]>([])
+  const [chapters, setChapters] = useState<{ title: string; file: string }[]>([])
+  const [activeChapter, setActiveChapter] = useState('')
+
+  // Style mixer
   const [styleOpen, setStyleOpen] = useState(false)
   const ALL_VOICES = ['Tom Clancy', 'J.R.R. Tolkien', 'Stephen King', 'J.K. Rowling', 'Hemingway', 'Cormac McCarthy', 'Raymond Chandler', 'Terry Pratchett']
   const [voices, setVoices] = useState<{ name: string; weight: number }[]>(() => {
@@ -24,19 +32,29 @@ export default function Editor({ project, onBack }: Props) {
   })
   const [showVoicePicker, setShowVoicePicker] = useState(false)
 
-  // Chapters
-  const [chapters, setChapters] = useState<{ title: string; id: string }[]>(() => {
-    const stored = localStorage.getItem(chaptersKey)
-    return stored ? JSON.parse(stored) : []
-  })
-  const [activeChapter, setActiveChapter] = useState<string>(chapters[0]?.id || '')
-  const [newChapterTitle, setNewChapterTitle] = useState('')
+  useEffect(() => {
+    fetchCharacters(project).then(setCharacters)
+    fetchChapters(project).then(chs => {
+      setChapters(chs)
+      if (chs.length > 0 && !activeChapter) {
+        setActiveChapter(chs[0].file)
+        fetchChapterContent(project, chs[0].file).then(text => saveContent(text))
+      }
+    })
+  }, [project])
 
-  // Characters from localStorage
-  const characters: { id: string; name: string }[] = (() => {
-    const stored = localStorage.getItem(`story-writer-characters-${project}`)
-    return stored ? JSON.parse(stored) : []
-  })()
+  const selectChapter = (file: string) => {
+    setActiveChapter(file)
+    fetchChapterContent(project, file).then(text => saveContent(text))
+  }
+
+  const openCharacter = (file: string, name: string) => {
+    fetchCharacterContent(project, file).then(text => {
+      setCharEditorRaw(text)
+      setCharEditorName(name)
+      setCharEditorOpen(true)
+    })
+  }
 
   const updateWeight = (idx: number, weight: number) => {
     const updated = [...voices]
@@ -55,33 +73,28 @@ export default function Editor({ project, onBack }: Props) {
     setShowVoicePicker(false)
     localStorage.setItem(`story-writer-voices-${project}`, JSON.stringify(updated))
   }
-  const totalWeight = voices.reduce((s, v) => s + v.weight, 0)
+  const totalWeight = voices.reduce((s, v) => s + v.weight, 0) || 1
 
   const saveContent = (text: string) => {
     setContent(text)
     localStorage.setItem(contentKey, text)
-    const lines = text.trim().split('\n').filter(Boolean)
-    const lastLine = lines[lines.length - 1]?.trim() || ''
-    const existing = JSON.parse(localStorage.getItem(stateKey) || '{}')
-    localStorage.setItem(stateKey, JSON.stringify({ ...existing, lastLine }))
-  }
-
-  const addChapter = () => {
-    if (!newChapterTitle.trim()) return
-    const id = crypto.randomUUID().slice(0, 8)
-    const updated = [...chapters, { title: newChapterTitle.trim(), id }]
-    setChapters(updated)
-    setActiveChapter(id)
-    setNewChapterTitle('')
-    localStorage.setItem(chaptersKey, JSON.stringify(updated))
   }
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length
 
-  const doSearch = () => {
+  const doSearch = async () => {
     if (!searchQuery.trim()) return
-    // Placeholder — real impl calls /api/search
-    setSearchResults([`Searching corpus for "${searchQuery}"... (connect OpenSearch for real results)`])
+    try {
+      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&project_id=${project}`)
+      if (res.ok) {
+        const data = await res.json()
+        setSearchResults(data.results || [])
+      } else {
+        setSearchResults([{ title: 'Info', snippet: `Search for "${searchQuery}" — start backend + OpenSearch for results` }])
+      }
+    } catch {
+      setSearchResults([{ title: 'Offline', snippet: 'Backend not running. Start with: story-writer serve' }])
+    }
   }
 
   return (
@@ -90,8 +103,8 @@ export default function Editor({ project, onBack }: Props) {
       <header className="flex items-center justify-between px-4 py-2 border-b border-[#2D2D3D] bg-[#0A0A0F] shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={onBack} className="text-[#6B7280] hover:text-[#E2E2E8]">←</button>
-          <span className="font-semibold">⚓ {project}</span>
-          {activeChapter && <span className="text-[#6B7280]">{chapters.find(c => c.id === activeChapter)?.title}</span>}
+          <span className="font-semibold">📖 {project.replace(/-/g, ' ')}</span>
+          {activeChapter && <span className="text-[#6B7280]">{chapters.find(c => c.file === activeChapter)?.title}</span>}
         </div>
         <div className="flex items-center gap-3">
           <button
@@ -112,58 +125,45 @@ export default function Editor({ project, onBack }: Props) {
             <ul className="space-y-1 text-sm">
               {chapters.map((ch, i) => (
                 <li
-                  key={ch.id}
-                  onClick={() => setActiveChapter(ch.id)}
-                  className={`px-2 py-1 rounded cursor-pointer ${ch.id === activeChapter ? 'text-[#E2E2E8] bg-[#06B6D4]/10 border-l-2 border-[#06B6D4]' : 'text-[#6B7280] hover:text-[#E2E2E8]'}`}
+                  key={ch.file}
+                  onClick={() => selectChapter(ch.file)}
+                  className={`px-2 py-1 rounded cursor-pointer truncate ${ch.file === activeChapter ? 'text-[#E2E2E8] bg-[#06B6D4]/10 border-l-2 border-[#06B6D4]' : 'text-[#6B7280] hover:text-[#E2E2E8]'}`}
                 >
-                  {i + 1}. {ch.title}
+                  {i}. {ch.title}
                 </li>
               ))}
+              {chapters.length === 0 && <li className="text-[#6B7280] text-xs px-2">No chapters found</li>}
             </ul>
-            <div className="flex gap-1 mt-2">
-              <input
-                value={newChapterTitle}
-                onChange={e => setNewChapterTitle(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && addChapter()}
-                placeholder="New chapter..."
-                className="flex-1 bg-transparent border-b border-[#2D2D3D] text-xs text-[#E2E2E8] placeholder-[#6B7280] outline-none"
-              />
-              <button onClick={addChapter} className="text-xs text-[#06B6D4]">+</button>
-            </div>
           </div>
           <div>
-            <div className="text-[#6B7280] text-xs uppercase tracking-wider mb-2">Characters</div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[#6B7280] text-xs uppercase tracking-wider">Characters ({characters.length})</div>
+              <button onClick={() => { setCharEditorRaw(''); setCharEditorName(''); setCharEditorOpen(true) }} className="text-[#06B6D4] hover:text-[#22D3EE] text-sm leading-none" title="New character">+</button>
+            </div>
             <ul className="space-y-1 text-sm">
-              {characters.map((c: { id: string; name: string }) => (
-                <li key={c.id} className="text-[#E2E2E8] px-2 py-1 cursor-pointer hover:text-[#06B6D4]" onClick={() => setCharEditorOpen(true)}>
-                  {c.name}
+              {characters.map(c => (
+                <li key={c.file} className="group flex items-center justify-between px-2 py-1 rounded cursor-default hover:bg-[#2D2D3D]">
+                  <span className="text-[#E2E2E8] truncate flex-1">{c.name}</span>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    <button onClick={() => openCharacter(c.file, c.name)} className="text-[#6B7280] hover:text-[#06B6D4] text-xs" title="Edit">✏️</button>
+                    <button onClick={() => { if (confirm(`Delete ${c.name}?`)) { /* TODO: API delete */ } }} className="text-[#6B7280] hover:text-red-400 text-xs" title="Delete">🗑</button>
+                  </div>
                 </li>
               ))}
               {characters.length === 0 && <li className="text-[#6B7280] text-xs px-2">No characters yet</li>}
             </ul>
-            <button onClick={() => setCharEditorOpen(true)} className="text-xs text-[#06B6D4] hover:text-[#22D3EE] mt-1 px-2">
-              {characters.length > 0 ? 'Edit →' : '+ Create character'}
-            </button>
-          </div>
-          <div>
-            <div className="text-[#6B7280] text-xs uppercase tracking-wider mb-2">
-              Entities
-            </div>
-            <button className="text-xs text-[#06B6D4] hover:text-[#22D3EE]">Review queue →</button>
           </div>
         </aside>
 
         {/* Editor canvas */}
         <main className="flex-1 flex flex-col bg-[#0D0D14] overflow-hidden">
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-[65ch] mx-auto">
-              <textarea
-                value={content}
-                onChange={(e) => saveContent(e.target.value)}
-                className="w-full h-full min-h-[60vh] bg-transparent text-[#E2E2E8] editor-font text-lg leading-relaxed outline-none resize-none"
-                placeholder="Start writing..."
-              />
-            </div>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <textarea
+              value={content}
+              onChange={(e) => saveContent(e.target.value)}
+              className="w-full h-full bg-transparent text-[#E2E2E8] editor-font text-lg leading-relaxed outline-none resize-none"
+              placeholder="Start writing..."
+            />
           </div>
           <div className="border-t border-[#2D2D3D] px-4 py-2 bg-[#0A0A0F]">
             <input
@@ -231,7 +231,8 @@ export default function Editor({ project, onBack }: Props) {
             </div>
             {searchResults.map((r, i) => (
               <div key={i} className="bg-[#0D0D14] border border-[#2D2D3D] rounded p-3 text-xs text-[#E2E2E8] leading-relaxed">
-                {r}
+                <div className="text-[#06B6D4] font-medium mb-1">{r.title}</div>
+                <div dangerouslySetInnerHTML={{ __html: r.snippet }} />
               </div>
             ))}
 
@@ -245,7 +246,21 @@ export default function Editor({ project, onBack }: Props) {
       </div>
 
       {charEditorOpen && (
-        <CharacterEditor project={project} onClose={() => setCharEditorOpen(false)} />
+        <CharacterEditor project={project} rawContent={charEditorRaw} initialName={charEditorName} onClose={() => setCharEditorOpen(false)} />
+      )}
+
+      {viewingCharacter && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-8">
+          <div className="bg-[#1A1A2E] border border-[#2D2D3D] rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#2D2D3D]">
+              <h2 className="text-xl font-bold text-[#E2E2E8]">{viewingCharacter.name}</h2>
+              <button onClick={() => setViewingCharacter(null)} className="text-[#6B7280] hover:text-[#E2E2E8] text-2xl">×</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <pre className="whitespace-pre-wrap text-[#E2E2E8] text-sm leading-relaxed font-sans">{viewingCharacter.content}</pre>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

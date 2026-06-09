@@ -5,17 +5,27 @@ An AI creative writing studio. Blend author voices (Tolkien, Clancy, King, Rowli
 ## Quick Start
 
 ```bash
-# Install
+# Install backend (from project root)
 pip install -e ".[dev]"
 
-# Index your corpus
-story-writer index ~/writing/worldbuilding/
+# Install frontend
+cd frontend && npm install && cd ..
 
-# Launch web UI
-story-writer serve
+# Start backend API (terminal 1)
+uvicorn story_writer.api:app --reload --host 0.0.0.0 --port 8000
 
-# Or use CLI
-story-writer cli
+# Start frontend dev server (terminal 2)
+cd frontend && npm run dev
+```
+
+Open **http://localhost:5173** in your browser (not port 8000).
+
+The backend API is available at `http://localhost:8000` (e.g. `/health`, `/api/projects`).
+
+```bash
+# Other commands
+story-writer index ~/writing/worldbuilding/   # Index your corpus
+story-writer cli                               # CLI mode
 ```
 
 ## Documentation

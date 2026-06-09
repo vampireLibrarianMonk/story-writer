@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 from pathlib import Path
 
 from opensearchpy import OpenSearch, helpers
@@ -27,7 +28,9 @@ _MAPPING = {
 }
 
 
-def get_client(host: str = "localhost", port: int = 9200) -> OpenSearch:
+def get_client(host: str | None = None, port: int | None = None) -> OpenSearch:
+    host = host or os.environ.get("OPENSEARCH_HOST", "localhost")
+    port = port or int(os.environ.get("OPENSEARCH_PORT", "9201"))
     return OpenSearch(hosts=[{"host": host, "port": port}], use_ssl=False, verify_certs=False)
 
 

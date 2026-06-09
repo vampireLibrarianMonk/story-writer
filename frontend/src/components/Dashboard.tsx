@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { fetchProjects } from '../api'
 
 interface Props {
   onOpen: (name: string) => void
@@ -6,32 +7,31 @@ interface Props {
 
 interface Project {
   name: string
-  genre: string
-  chapters: number
-  words: number
-}
-
-const STORAGE_KEY = 'story-writer-projects'
-
-function loadProjects(): Project[] {
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored) return JSON.parse(stored)
-  return []
-}
-
-function saveProjects(projects: Project[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(projects))
+  path?: string
 }
 
 export default function Dashboard({ onOpen }: Props) {
   const [newName, setNewName] = useState('')
-  const [projects, setProjects] = useState<Project[]>(loadProjects)
+  const [projects, setProjects] = useState<Project[]>([])
 
-  useEffect(() => { saveProjects(projects) }, [projects])
+  useEffect(() => {
+    fetchProjects().then(setProjects).catch(() => {
+      // Fallback: if backend not running, show empty
+      setProjects([])
+    })
+  }, [])
 
-  const createProject = () => {
+  const createProject = async () => {
     if (!newName.trim()) return
-    setProjects([...projects, { name: newName, genre: '', chapters: 0, words: 0 }])
+    // Try backend first
+    try {
+      await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName }),
+      })
+    } catch {}
+    setProjects([...projects, { name: newName }])
     setNewName('')
   }
 
@@ -47,12 +47,8 @@ export default function Dashboard({ onOpen }: Props) {
             onClick={() => onOpen(p.name)}
             className="bg-[#1A1A2E] border border-[#2D2D3D] rounded-xl p-6 text-left hover:border-[#06B6D4] transition-colors"
           >
-            <div className="text-2xl mb-2">⚓</div>
-            <div className="font-semibold text-lg">{p.name}</div>
-            <div className="text-[#6B7280] text-sm mt-1">{p.genre}</div>
-            <div className="text-[#6B7280] text-xs mt-3">
-              Ch.{p.chapters} · {p.words.toLocaleString()} words
-            </div>
+            <div className="text-2xl mb-2">📖</div>
+            <div className="font-semibold text-lg">{p.name.replace(/-/g, ' ')}</div>
           </button>
         ))}
 

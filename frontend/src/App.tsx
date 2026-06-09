@@ -11,9 +11,8 @@ export default function App() {
   const [isNew, setIsNew] = useState(false)
 
   const openProject = (name: string) => {
-    const hasContent = localStorage.getItem(`story-writer-content-${name}`)
     setProject(name)
-    setIsNew(!hasContent)
+    setIsNew(false)
     setScreen('briefing')
   }
 
